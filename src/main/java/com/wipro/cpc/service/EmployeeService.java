@@ -1,11 +1,13 @@
 package com.wipro.cpc.service;
 
+import com.wipro.cpc.dto.EmployeeDTO;
 import com.wipro.cpc.model.Employee;
 import com.wipro.cpc.repository.EmployeeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class EmployeeService {
@@ -17,27 +19,41 @@ public class EmployeeService {
         return employeeRepository.findAll();
     }
 
-    public Employee getEmployeeById(Long id) {
-        return employeeRepository.findById(id).orElse(null);
+    public List<Employee> getEmployeesByMaxSalary(double maxSalary) {
+        return employeeRepository.findBySalaryLessThanEqual(maxSalary);
+    }
+    
+
+    public ResponseEntity<Employee> getEmployeeById(Long id) {
+        return employeeRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    public Employee createEmployee(Employee employee) {
+    public Employee createEmployee(EmployeeDTO employeeDTO) {
+        Employee employee = new Employee();
+        employee.setName(employeeDTO.getName());
+        employee.setEmail(employeeDTO.getEmail());
+        employee.setDepartment(employeeDTO.getDepartment());
+        employee.setSalary(employeeDTO.getSalary());
         return employeeRepository.save(employee);
     }
 
-    public Employee updateEmployee(Long id, Employee updatedEmployee) {
-        Optional<Employee> optionalEmployee = employeeRepository.findById(id);
-        if (optionalEmployee.isPresent()) {
-            Employee existingEmployee = optionalEmployee.get();
-            existingEmployee.setName(updatedEmployee.getName());
-            existingEmployee.setEmail(updatedEmployee.getEmail());
-            existingEmployee.setDepartment(updatedEmployee.getDepartment());
-            return employeeRepository.save(existingEmployee);
-        }
-        return null;
+    public Employee updateEmployee(Long id, EmployeeDTO updatedEmployee) {
+        return employeeRepository.findById(id).map(employee -> {
+            employee.setName(updatedEmployee.getName());
+            employee.setEmail(updatedEmployee.getEmail());
+            employee.setDepartment(updatedEmployee.getDepartment());
+            employee.setSalary(updatedEmployee.getSalary()); // Fixed salary update
+            return employeeRepository.save(employee);
+        }).orElse(null);
     }
 
-    public void deleteEmployee(Long id) {
-        employeeRepository.deleteById(id);
+    public boolean deleteEmployee(Long id) {
+        if (employeeRepository.existsById(id)) {
+            employeeRepository.deleteById(id);
+            return true;
+        }
+        return false;
     }
 }
